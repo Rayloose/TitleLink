@@ -148,31 +148,16 @@ class PlayerMonitor:
         # Initialize CSV file with headers if it doesn't exist
         self.init_csv_log()
     
-    def determine_genre(self, title, artist):
-        # Placeholder logic for determining genre based on title or artist
-        # You can replace this with a more sophisticated genre-detection algorithm
-        if 'rock' in title.lower() or 'rock' in artist.lower():
-            return 'Rock'
-        elif 'jazz' in title.lower() or 'jazz' in artist.lower():
-            return 'Jazz'
-        elif 'pop' in title.lower() or 'pop' in artist.lower():
-            return 'Pop'
-        elif 'classical' in title.lower() or 'mozart' in artist.lower():
-            return 'Classical'
-        else:
-            return 'Unknown'
-
     def init_csv_log(self):
         try:
             with open(CSV_LOG_FILE, 'x', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Player ID', 'Title', 'Artist', 'BPM', 'Start Time', 'End Time', 'Duration (seconds)', 'Genre'])
+                writer.writerow(['Player ID', 'Title', 'Artist', 'BPM', 'Start Time', 'End Time', 'Duration (seconds)'])
         except FileExistsError:
             pass  # File already exists, no need to create
     
     def log_master_session(self, player_id, title, artist, bpm, start_time, end_time):
         duration = (end_time - start_time).total_seconds()
-        genre = self.determine_genre(title, artist)
         with open(CSV_LOG_FILE, 'a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -182,10 +167,9 @@ class PlayerMonitor:
                 bpm,
                 start_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
                 end_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                f'{duration:.2f}',
-                genre
+                f'{duration:.2f}'
             ])
-        print(f'Logged master session: Player {player_id} - {title} by {artist} ({duration:.2f}s, Genre: {genre})')
+        print(f'Logged master session: Player {player_id} - {title} by {artist} ({duration:.2f}s)')
     
     def start(self):
         print(f'Watching {URL} — Ctrl+C to stop the flow')
