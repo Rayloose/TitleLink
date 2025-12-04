@@ -2,6 +2,7 @@ import requests
 from pythonosc.udp_client import SimpleUDPClient
 import sys
 import csv
+import os
 from datetime import datetime
 from collections import deque
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
@@ -16,8 +17,15 @@ import requests
 HOST = '127.0.0.1'
 PORT = 17081
 URL = f'http://{HOST}:{PORT}/params.json'
-POLL_INTERVAL = 100  # milliseconds for QTimer
-CSV_LOG_FILE = 'master_player_log.csv'
+POLL_INTERVAL = 50  # milliseconds for QTimer
+
+# Create log folder if it doesn't exist
+LOG_FOLDER = 'master_player_log'
+os.makedirs(LOG_FOLDER, exist_ok=True)
+
+# Generate timestamped filename for this session
+session_timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+CSV_LOG_FILE = os.path.join(LOG_FOLDER, f'master_player_log_{session_timestamp}.csv')
 
 osc_destination_resolume = "/composition/layers/1/clips/4/video/source/blocktextgenerator/text/params/lines" # layer 1, clip 4
 osc_destination_beyond = "/beyond/cue/0/0/text" # first cue of the first page of your workspace
@@ -140,16 +148,31 @@ class PlayerMonitor:
         # Initialize CSV file with headers if it doesn't exist
         self.init_csv_log()
     
+    def determine_genre(self, title, artist):
+        # Placeholder logic for determining genre based on title or artist
+        # You can replace this with a more sophisticated genre-detection algorithm
+        if 'rock' in title.lower() or 'rock' in artist.lower():
+            return 'Rock'
+        elif 'jazz' in title.lower() or 'jazz' in artist.lower():
+            return 'Jazz'
+        elif 'pop' in title.lower() or 'pop' in artist.lower():
+            return 'Pop'
+        elif 'classical' in title.lower() or 'mozart' in artist.lower():
+            return 'Classical'
+        else:
+            return 'Unknown'
+
     def init_csv_log(self):
         try:
             with open(CSV_LOG_FILE, 'x', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Player ID', 'Title', 'Artist', 'BPM', 'Start Time', 'End Time', 'Duration (seconds)'])
+                writer.writerow(['Player ID', 'Title', 'Artist', 'BPM', 'Start Time', 'End Time', 'Duration (seconds)', 'Genre'])
         except FileExistsError:
             pass  # File already exists, no need to create
     
     def log_master_session(self, player_id, title, artist, bpm, start_time, end_time):
         duration = (end_time - start_time).total_seconds()
+        genre = self.determine_genre(title, artist)
         with open(CSV_LOG_FILE, 'a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -159,9 +182,10 @@ class PlayerMonitor:
                 bpm,
                 start_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
                 end_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                f'{duration:.2f}'
+                f'{duration:.2f}',
+                genre
             ])
-        print(f'Logged master session: Player {player_id} - {title} by {artist} ({duration:.2f}s)')
+        print(f'Logged master session: Player {player_id} - {title} by {artist} ({duration:.2f}s, Genre: {genre})')
     
     def start(self):
         print(f'Watching {URL} — Ctrl+C to stop the flow')
