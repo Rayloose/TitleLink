@@ -14,7 +14,9 @@ url = "http://localhost:17081/params.json"
 import time
 import requests
 
-HOST = '127.0.0.1'
+HOST1 = '127.0.0.1'
+HOST2 = '10.117.15.20'
+HOST = HOST1
 PORT = 17081
 URL = f'http://{HOST}:{PORT}/params.json'
 POLL_INTERVAL = 50  # milliseconds for QTimer
@@ -42,10 +44,10 @@ def fetch_params():
 
 class Track:
     def __init__(self, data):
-        self.data = data.get('track')
-        self.artist = self.data.get('artist')
-        self.title = self.data.get('title')
-        self.id = self.data.get('id')
+        self.data = data.get('track') or {}
+        self.artist = self.data.get('artist') or ""
+        self.title = self.data.get('title') or ""
+        self.id = self.data.get('id') or ""
         
         self.bpm = data.get('track-bpm')
         self.tempo = data.get('tempo')  # BPM actuel en temps réel
@@ -54,7 +56,9 @@ class Track:
         if self.tempo and self.bpm:
             bpm_change = ((self.tempo - self.bpm) / self.bpm) * 100
             sign = '+' if bpm_change >= 0 else ''
-        return f"{self.title} - {self.artist}   ({self.tempo:.1f} BPM {sign}{bpm_change:.1f}%)"
+            return f"{self.title} - {self.artist}   ({self.tempo:.1f} BPM {sign}{bpm_change:.1f}%)"
+        else:
+            return f"{self.title} - {self.artist}"
 
 
 class Player :
@@ -74,8 +78,8 @@ class PlayerWindow(QWidget):
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.resize(1875, 100)
         
-        # Set window background to black (title bar and borders)
-        self.setStyleSheet('QWidget { background-color: black; }')
+        # # Set window background to black (title bar and borders)
+        # self.setStyleSheet('QWidget { background-color: black; }')
         
         self.label = QLabel('No track loaded', self)
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -185,7 +189,7 @@ class PlayerMonitor:
             self.players[pid] = Player(pid, player_data)
             
             window = PlayerWindow(pid)
-            window.move(100 + int(pid) * 50, 100 + int(pid) * 50)
+            window.move(10, 10 + (int(pid)-1) * 200)
             is_master = player_data.get('is-tempo-master', False)
             window.update_player(self.players[pid], is_master)
             window.show()
@@ -193,7 +197,7 @@ class PlayerMonitor:
 
             self.last_titles[pid] = self.players[pid].track.title
             
-            # Initialize master status tracking
+            # Initialize master status tracking to save in the log
             self.master_status[pid] = is_master
             if is_master:
                 self.master_start_times[pid] = datetime.now()
@@ -226,7 +230,7 @@ class PlayerMonitor:
                     # Check for master status change
                     previous_master = self.master_status.get(pid, False)
                     
-                    if is_master and not previous_master:
+                    if is_master and not previous_master: #case where there is a new master
                         # Became master
                         self.master_start_times[pid] = datetime.now()
                         self.master_track_info[pid] = (
@@ -234,7 +238,7 @@ class PlayerMonitor:
                             self.players[pid].track.artist,
                             self.players[pid].track.bpm
                         )
-                    elif not is_master and previous_master:
+                    elif not is_master and previous_master: #case when the current master end being the master
                         # Stopped being master
                         if pid in self.master_start_times and pid in self.master_track_info:
                             end_time = datetime.now()
